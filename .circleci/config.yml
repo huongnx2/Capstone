@@ -14,13 +14,14 @@ jobs:
       stack-name:
         type: string
         default: ${STACK_NAME}
+    executor: aws-cli/default
     steps:
       - run:
           name: Destroy environments
           when: on_fail
           command: |
-            echo capstone-demo \
-            aws cloudformation delete-stack --stack-name capstone-demo
+            echo << parameters.stack-name >> \
+            aws cloudformation delete-stack --stack-name << parameters.stack-name >>
             
   lint-infras:
     docker:
