@@ -37,12 +37,67 @@ jobs:
             --parameter-overrides $(jq -r '.[] | [.ParameterKey, .ParameterValue] | "\(.[0])=\(.[1])"' ./infras/infras-params.json) \
             --stack-name << parameters.stack-name >> \
             --capabilities "CAPABILITY_IAM" "CAPABILITY_NAMED_IAM"
+            
+  lint-frontend:
+    docker:
+      - image: node:13.8.0
+    steps:
+      - checkout
+      - run:
+          name: Check lint code
+          command: |
+            cd capstone-demo
+            npm install
+            npm run test
+
+  build-frontend:
+    docker:
+      - image: docker:17.05.0-ce-git
+    steps:
+      - checkout
+      - setup_remote_docker
+      - restore_cache:
+          keys:
+            - v1-{{ .Branch }}
+          paths:
+            - /caches/capstone-frontend.tar
+      - run:
+          name: Load Docker image layer cache
+          command: |
+            # set +o pipefail
+            if [[ -f "/caches/app.tar" ]]; then
+              docker load -i /caches/app.tar | true
+            fi
+      - run:
+          name: Build front-end
+          command: |
+            cd frontend
+            docker build -t huongnx2/capstone-demo .
+      - run:
+          name: Save Docker image layer cache
+          command: |
+            mkdir -p /caches
+            docker save -o /caches/capstone-demo.tar huongnx2/capstone-demo
+      - save_cache:
+          key: v1-{{ .Branch }}-{{ epoch }}
+          paths:
+            - /caches/capstone-demo.tar
+      - run:
+          name: Publish Docker Image to Docker Hub
+          command: |
+            echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" -p "$DOCKERHUB_PASSWORD"
+            docker push huongnx2/capstone-demo:latest
+
 
 workflows:
   capstone:
     jobs:
-      - lint-infras
-      - deploy-infras:
-          stack-name: capstone-demo
+      # - lint-infras
+      # - deploy-infras:
+      #     stack-name: capstone-demo
+      #     requires:
+      #       - lint-infras
+      - lint-frontend
+      - build-frontend:
           requires:
-            - lint-infras
+            - lint-frontend
