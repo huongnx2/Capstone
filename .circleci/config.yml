@@ -71,7 +71,7 @@ jobs:
       - run:
           name: Build front-end
           command: |
-            cd frontend
+            cd capstone-demo
             docker build -t huongnx2/capstone-demo .
       - run:
           name: Save Docker image layer cache
