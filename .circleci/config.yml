@@ -171,7 +171,7 @@ jobs:
           resource-name: deployment/capstone-demo-$COLOR
       - kubernetes/update-container-image:
           get-rollout-status: true
-          container-image-updates: "capstone-frontend=binhnguyen058/capstone-frontend:latest"
+          container-image-updates: "capstone-demo=huongnx2/capstone-demo:latest"
           resource-name: deployment/capstone-demo-$COLOR
       - run:
           name: Restart image
