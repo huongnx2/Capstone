@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: capstone-demo
+  labels:
+    app: capstone-demo
+    role: $COLOR
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 80
+  selector:
+    app: capstone-demo
+    role: $COLOR

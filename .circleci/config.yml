@@ -60,7 +60,7 @@ jobs:
           keys:
             - v1-{{ .Branch }}
           paths:
-            - /caches/capstone-frontend.tar
+            - /caches/capstone-demo.tar
       - run:
           name: Load Docker image layer cache
           command: |
@@ -88,16 +88,82 @@ jobs:
             echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" -p "$DOCKERHUB_PASSWORD"
             docker push huongnx2/capstone-demo:latest
 
+  deploy-frontend:
+    docker:
+      - image: cimg/python:3.10
+    parameters:
+      cluster-name:
+        description: |
+          EKS Cluster Name
+        type: string
+    steps:
+      - checkout
+      - aws-eks/update-kubeconfig-with-authenticator:
+          cluster-name: << parameters.cluster-name >>
+          install-kubectl: true
+      - run:
+          name: Install envsubst
+          command: |
+            curl -L https://github.com/a8m/envsubst/releases/download/v1.2.0/envsubst-`uname -s`-`uname -m` -o envsubst
+            chmod +x envsubst
+            sudo mv envsubst /usr/local/bin
+      - run:
+          name: Restart image
+          command: |
+            kubectl get service > service.txt
+            if grep -q 'capstone-demo' service.txt; then
+              kubectl describe service capstone-demo > capstone.txt
+              if grep -q "role=green" capstone.txt; then
+                echo 'export COLOR=blue' >> "$BASH_ENV"
+              else
+                echo 'export COLOR=green' >> "$BASH_ENV"
+              fi
+            else
+              echo 'export COLOR=blue' >> "$BASH_ENV"
+            fi
+            source "$BASH_ENV"
+      - run:
+          name: Replace variable
+          command: |
+            envsubst < kubernates/fe-deployment.yml > kubernates/fe-deployment.yml.temp && cp -f kubernates/fe-deployment.yml.temp kubernates/fe-deployment.yml
+            envsubst < kubernates/fe-service.yml > kubernates/fe-service.yml.temp && cp -f kubernates/fe-service.yml.temp kubernates/fe-service.yml
+            echo "######"
+            cat kubernates/fe-deployment.yml
+            echo "######"
+            cat kubernates/fe-service.yml
+      - kubernetes/create-or-update-resource:
+          get-rollout-status: true
+          resource-file-path: "kubernates/fe-deployment.yml"
+          resource-name: deployment/capstone-demo-$COLOR
+      - kubernetes/create-or-update-resource:
+          get-rollout-status: true
+          resource-file-path: "kubernates/fe-service.yml"
+          resource-name: deployment/capstone-demo-$COLOR
+      - kubernetes/update-container-image:
+          get-rollout-status: true
+          container-image-updates: "capstone-frontend=binhnguyen058/capstone-frontend:latest"
+          resource-name: deployment/capstone-demo-$COLOR
+      - run:
+          name: Restart image
+          command: |
+            kubectl rollout restart deployment/capstone-demo-$COLOR
+
+
 
 workflows:
   capstone:
     jobs:
-      # - lint-infras
-      # - deploy-infras:
-      #     stack-name: capstone-demo
-      #     requires:
-      #       - lint-infras
+      - lint-infras
+      - deploy-infras:
+          stack-name: capstone-demo
+          requires:
+            - lint-infras
       - lint-frontend
       - build-frontend:
           requires:
             - lint-frontend
+      - deploy-frontend:
+          cluster-name: "EKSClusterCapstone"
+          requires:
+            - build-frontend
+            - deploy-infras
