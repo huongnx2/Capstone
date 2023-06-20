@@ -24,7 +24,6 @@ commands:
       stack-name:
         type: string
         default: ${STACK_NAME}
-    executor: aws-cli/default
     steps:
       - run:
           name: Destroy environments
