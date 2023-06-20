@@ -9,7 +9,7 @@ orbs:
 jobs:
 
   destroy-environment:
-    description: Destroy cloudformation stacks given a stack name.
+    description: Destroy cloudformation stack given a stack name.
     parameters:
       stack-name:
         type: string
@@ -19,7 +19,7 @@ jobs:
           name: Destroy environments
           when: on_fail
           command: |
-            echo << parameters.stack-name >>
+            echo << parameters.stack-name >> \
             aws cloudformation delete-stack --stack-name << parameters.stack-name >>
             
   lint-infras:
