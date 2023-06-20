@@ -13,6 +13,7 @@ jobs:
     parameters:
       stack-name:
         type: string
+        default: ${STACK_NAME}
     steps:
       - run:
           name: Destroy environments
@@ -173,7 +174,7 @@ workflows:
     jobs:
       - lint-infras
       - deploy-infras:
-          stack-name: capstone-demo
+          stack-name: ${STACK_NAME}
           requires:
             - lint-infras
       - lint-frontend
