@@ -19,8 +19,8 @@ jobs:
           name: Destroy environments
           when: on_fail
           command: |
-            echo << parameters.stack-name >> \
-            aws cloudformation delete-stack --stack-name << parameters.stack-name >>
+            echo capstone-demo \
+            aws cloudformation delete-stack --stack-name capstone-demo
             
   lint-infras:
     docker:
